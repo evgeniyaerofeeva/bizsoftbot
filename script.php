@@ -30,7 +30,7 @@ class Contacts {
             'Артем',
             'Андрей',
             'Антон',
-            'Константин'
+            'Аркадий'
         ];
         $last_name = [
             'Иванов',
@@ -102,7 +102,7 @@ class Contacts {
             '8800917' . $number_generate,
             '8800918' . $number_generate,
             '8800919' . $number_generate,
-            '8800910' . $number_generate,
+            '88000910' . $number_generate,
         ];
         $email_value_one = [
             'test@mail.ru',
@@ -152,11 +152,12 @@ class Contacts {
         $queue_data = new SplQueue();
         $queue_data->setIteratorMode(SplQueue::IT_MODE_DELETE);
 
-        for($id=1; $id<=100000; $id++) {
-            $first_name_add = $first_name[rand(0,19)];
-            $last_name_add = $last_name[rand(0,19)];
-            $data['add'] = [
-                [
+        for($id=1; $id<=500; $id++) {
+            $contacts_data = [];
+            for ($i=1; $i<=200; $i++) {
+                $first_name_add = $first_name[rand(0,19)];
+                $last_name_add = $last_name[rand(0,19)];
+                $contact_value = [
                     'name' => $first_name_add . ' ' . $last_name_add,
                     'first_name' => $first_name_add,
                     'last_name' => $last_name_add,
@@ -213,8 +214,10 @@ class Contacts {
                     ],
                     'account_id'=>32787098,
                     "_embedded" => ["tags"=> [],"companies" => []],
-                ]
-            ];
+                ];
+                array_push($contacts_data, $contact_value);
+            }
+            $data['add'] = $contacts_data;
             $queue_data[] = $data;
         }
 
@@ -232,10 +235,29 @@ class Contacts {
      * @return array
      */
     public function findDuplContacts ($type = 'PHONE') {
-        $contacts_data = $this->requestContacts();
-        foreach ($contacts_data['_embedded']['items'] as $contacts) {
-            foreach ($contacts['custom_fields'] as $custom_field) {
-                if ($custom_field['code'] == $type) {
+        $all_contacts = [];
+        $page = 1;
+        do {
+            $params = [
+                'page' => $page,
+            ];
+
+            $contacts_data = $this->requestContacts('GET', NULL , $params);
+
+            if (isset($contacts_data['_embedded']['contacts'])) {
+                $contacts_page = $contacts_data['_embedded']['contacts'];
+                $all_contacts = array_merge($all_contacts, $contacts_page);
+            }
+
+            $page++;
+        }
+        while (
+            isset($contacts_data['_links']['next'])
+        );
+
+        foreach ($all_contacts as $contacts) {
+            foreach ($contacts['custom_fields_values'] as $custom_field) {
+                if ($custom_field['field_code'] == $type) {
                     $custom_field_array[] = $custom_field['values'][0]['value'];
                 }
             }
@@ -261,7 +283,7 @@ class Contacts {
      * @param $type
      * @return void
      */
-    public function requestContacts ($type_request = 'GET', $data = NULL) {
+    public function requestContacts($type_request = 'GET', $data = NULL, $params = NULL) {
         /** Получаем access_token из вашего хранилища */
         $access_token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6IjVhZmRkNzI1YjhiNDUwMmI4ZTk0Y2I1YmI0MjA1Zjk2MmRiNzFjYjJmMTZhNDczNTYyZDk4NWI5OGMyZTgwOTJmOTM5Mzg4OTMwNTI2NjNmIn0.eyJhdWQiOiIzM2Y0YTYyYi0zNjQ4LTRiMzktODdjMy1mNmRkNmM0ZjU3MmQiLCJqdGkiOiI1YWZkZDcyNWI4YjQ1MDJiOGU5NGNiNWJiNDIwNWY5NjJkYjcxY2IyZjE2YTQ3MzU2MmQ5ODViOThjMmU4MDkyZjkzOTM4ODkzMDUyNjYzZiIsImlhdCI6MTc2NDQxOTI1MiwibmJmIjoxNzY0NDE5MjUyLCJleHAiOjE3NjUwNjU2MDAsInN1YiI6IjEzMjYzNzI2IiwiZ3JhbnRfdHlwZSI6IiIsImFjY291bnRfaWQiOjMyNzg3MDk4LCJiYXNlX2RvbWFpbiI6ImFtb2NybS5ydSIsInZlcnNpb24iOjIsInNjb3BlcyI6WyJjcm0iLCJmaWxlcyIsImZpbGVzX2RlbGV0ZSIsIm5vdGlmaWNhdGlvbnMiLCJwdXNoX25vdGlmaWNhdGlvbnMiXSwiaGFzaF91dWlkIjoiOTg1ZWMyNDEtZmYyNS00ZGViLWFmZTItMzY5NTMxNzQ4ZjczIiwidXNlcl9mbGFncyI6MCwiYXBpX2RvbWFpbiI6ImFwaS1iLmFtb2NybS5ydSJ9.Md0DkW1c-NWXE1c-631zC9VkAZGZMyM4JZZ_agJDQn1QJcVKyoytEpbXSm7LeJP_CG4UMIAShWJgh_H0DvbB_aLHpmGU32CcbtaxsPBe02r_kxV1jUci7DK4hIGlOl2ZPFVkoLXs-drlW7ERhIshiKi46HJauTq50UDnd1X1PNE2-MKt8WcN-0MfCfB3QE2PE7zXP9SfSAk3sF63DuE_a4sr3a_puSUPV9TUBD9-a74DJwyjE9F0wM_cJIlFCiManyrtGRQQisvcWq9ZAFe5o6vSI9U0-6Nmi6RC4Mw_9T3qOGa_4LnvHa8cA6ov7ATxN3vEy01CcKBVADuYTjRh_g';
         /** Формируем заголовки */
@@ -271,6 +293,10 @@ class Contacts {
         /* Теперь подготовим данные, необходимые для запроса к серверу */
         $subdomain = 'evgeniyaerofeeva'; #Наш аккаунт - поддомен
         $link = 'https://' . $subdomain . '.amocrm.ru/api/v2/contacts';
+        if (isset($params)) {
+             // Формируем URL для запроса с параметрами
+            $link = 'https://' . $subdomain . '.amocrm.ru/api/v4/contacts' . '?' . http_build_query($params);
+        }
         /* Нам необходимо инициировать запрос к серверу. Воспользуемся библиотекой cURL (поставляется в составе PHP). Подробнее о работе с этой
         библиотекой Вы можете прочитать в мануале. */
         $curl = curl_init(); #Сохраняем дескриптор сеанса cURL
@@ -281,6 +307,9 @@ class Contacts {
         curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $type_request);
         if (isset($data)) {
             curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($data));
+        }
+        if (isset($params)) {
+           curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query($params));
         }
         curl_setopt($curl, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
         curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
@@ -328,3 +357,4 @@ $contacts = new Contacts();
 $contacts->createContacts();
 $contacts->findDuplContacts();
 $contacts->findDuplContacts('EMAIL');
+
